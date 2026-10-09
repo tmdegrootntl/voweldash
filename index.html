@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dash Phonics - Geometry Spelling Runner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;700;900&display=swap');
+        
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #050811;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Neon & Glow Tokens */
+        .neon-box-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5), inset 0 0 12px rgba(6, 182, 212, 0.3);
+        }
+
+        .neon-box-fuchsia {
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.6), inset 0 0 15px rgba(236, 72, 153, 0.3);
+        }
+
+        .neon-box-amber {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), inset 0 0 10px rgba(245, 158, 11, 0.3);
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+
+        .neon-text-fuchsia {
+            text-shadow: 0 0 10px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.5);
+        }
+
+        @keyframes pulse-gate {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.02); filter: brightness(1.2); }
+        }
+
+        .animate-gate-pulse {
+            animation: pulse-gate 1.5s infinite ease-in-out;
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 md:p-4 bg-slate-950 text-white">
+
+    <div class="relative w-full max-w-5xl h-[88vh] max-h-[720px] min-h-[520px] flex flex-col justify-between items-center rounded-2xl border-4 border-cyan-500/40 bg-slate-900/90 shadow-2xl overflow-hidden neon-box-cyan">
+
+        <!-- Top Header HUD -->
+        <div class="w-full px-4 py-3 bg-slate-900/90 backdrop-blur-md border-b border-cyan-500/30 flex justify-between items-center z-10">
+            <!-- Game Title Branding -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-fuchsia-500 to-amber-400 flex items-center justify-center font-outfit font-black text-2xl text-slate-950 shadow-lg">
+                    <i class="fas fa-cube"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-black font-outfit tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300">
+                        DASH PHONICS
+                    </h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">Jump obstacles & clear the 5-second Spelling Gate!</p>
+                </div>
+            </div>
+
+            <!-- Stats Bar & Gate Timer Progress -->
+            <div class="flex items-center gap-3 md:gap-6 text-sm font-bold">
+                <!-- Gate Timer Bar -->
+                <div class="hidden md:flex flex-col items-center w-28">
+                    <div class="flex justify-between w-full text-[10px] text-cyan-300 mb-1">
+                        <span>GATE IN</span>
+                        <span id="gateTimerText">5.0s</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-cyan-500/40">
+                        <div id="gateTimerBar" class="h-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 transition-all duration-100" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-cyan-400 tracking-wider">SCORE</span>
+                    <span id="scoreText" class="text-lg md:text-xl font-outfit text-white">0</span>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-fuchsia-400 tracking-wider">BEST</span>
+                    <span id="highScoreText" class="text-lg md:text-xl font-outfit text-fuchsia-300">0</span>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-amber-400 tracking-wider">COMBO</span>
+                    <span id="streakText" class="text-lg md:text-xl font-outfit text-amber-300">x1</span>
+                </div>
+
+                <!-- Shield Indicator -->
+                <div id="shieldIndicator" class="hidden flex items-center gap-1 text-xs text-cyan-300 bg-cyan-950/80 border border-cyan-400 px-2.5 py-1 rounded-lg">
+                    <i class="fas fa-shield-alt text-cyan-400 animate-pulse"></i> SHIELD
+                </div>
+
+                <!-- Sound Control -->
+                <button id="soundBtn" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 transition-all active:scale-95">
+                    <i id="soundIcon" class="fas fa-volume-up text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Canvas Canvas Screen -->
+        <div class="relative w-full flex-1 flex items-center justify-center overflow-hidden">
+            <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+            <!-- SPELLING GATE OVERLAY (Triggers every 5 seconds) -->
+            <div id="spellingGateOverlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-4 z-30">
+                <div class="max-w-lg w-full bg-slate-900/95 border-2 border-fuchsia-500/80 rounded-2xl p-6 shadow-2xl neon-box-fuchsia flex flex-col items-center animate-gate-pulse text-center">
+                    
+                    <!-- Gate Header Tag -->
+                    <div class="flex items-center gap-2 px-3 py-1 bg-fuchsia-950/80 border border-fuchsia-400 rounded-full text-fuchsia-300 text-xs font-bold tracking-widest uppercase mb-3">
+                        <i class="fas fa-portal-enter text-amber-400 animate-spin"></i> SPELLING GATE PORTAL
+                    </div>
+
+                    <h3 class="text-slate-300 text-sm mb-1">Which word is correctly spelled?</h3>
+                    <div id="promptTargetWord" class="text-2xl md:text-3xl font-black font-outfit text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-300 mb-4 tracking-wide">
+                        Choose the correct spelling!
+                    </div>
+
+                    <!-- Audio Speech Button -->
+                    <button id="speakPromptBtn" class="mb-5 px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-cyan-500/50 text-cyan-300 text-xs font-bold flex items-center gap-2 transition-all active:scale-95">
+                        <i class="fas fa-volume-up text-cyan-400"></i> Listen to Word
+                    </button>
+
+                    <!-- Challenge Countdown Bar inside Gate -->
+                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700 mb-6">
+                        <div id="gateCountdownBar" class="h-full bg-amber-400 transition-all duration-100" style="width: 100%;"></div>
+                    </div>
+
+                    <!-- 3 Multiple Choice Options -->
+                    <div id="spellingOptionsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+                        <!-- Dynamically populated choices -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start / Main Menu Overlay -->
+            <div id="startOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+                <div class="max-w-md w-full bg-slate-900/95 border-2 border-cyan-500/50 rounded-2xl p-6 shadow-2xl neon-box-cyan flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 via-fuchsia-500 to-amber-400 flex items-center justify-center text-slate-950 text-3xl font-black mb-4 shadow-lg animate-bounce">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <h2 class="text-3xl font-black font-outfit text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300 mb-2">
+                        DASH PHONICS
+                    </h2>
+                    <p class="text-slate-300 text-xs md:text-sm mb-5 leading-relaxed">
+                        Auto-run through neon obstacles! Every <span class="text-cyan-300 font-bold">5 seconds</span>, enter the <span class="text-fuchsia-300 font-bold">Spelling Gate</span> and select the correct short-vowel CVC, CCVC, or CVCC word to gain a shield and boost!
+                    </p>
+
+                    <!-- Speed Selector -->
+                    <div class="w-full mb-6">
+                        <label class="block text-xs text-slate-400 mb-2 font-bold tracking-wider">SELECT SPEED</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="speed-btn py-2 rounded-xl border border-emerald-500/50 bg-emerald-950/40 text-emerald-400 text-xs font-bold hover:bg-emerald-900/50 transition-all active:scale-95" data-speed="easy">
+                                EASY
+                            </button>
+                            <button class="speed-btn active-speed py-2 rounded-xl border-2 border-cyan-400 bg-cyan-950/60 text-cyan-300 text-xs font-bold hover:bg-cyan-900/50 transition-all active:scale-95 shadow-lg shadow-cyan-500/20" data-speed="normal">
+                                NORMAL
+                            </button>
+                            <button class="speed-btn py-2 rounded-xl border border-fuchsia-500/50 bg-fuchsia-950/40 text-fuchsia-400 text-xs font-bold hover:bg-fuchsia-900/50 transition-all active:scale-95" data-speed="fast">
+                                FAST
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Controls Hint -->
+                    <div class="flex items-center justify-center gap-4 text-xs text-slate-400 mb-6 bg-slate-800/60 py-2 px-4 rounded-xl border border-slate-700 w-full">
+                        <span><kbd class="px-2 py-0.5 bg-slate-700 text-cyan-300 rounded border border-slate-600 font-mono">SPACE</kbd> / <kbd class="px-2 py-0.5 bg-slate-700 text-cyan-300 rounded border border-slate-600 font-mono">UP</kbd></span>
+                        <span>•</span>
+                        <span><i class="fas fa-hand-pointer text-cyan-400 mr-1"></i> Tap to Jump</span>
+                    </div>
+
+                    <button id="startBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400 text-slate-950 font-black text-lg font-outfit shadow-lg hover:brightness-110 active:scale-98 transition-all">
+                        START RUNNING
+                    </button>
+                </div>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-40">
+                <div class="max-w-md w-full bg-slate-900/95 border-2 border-fuchsia-500/60 rounded-2xl p-6 shadow-2xl neon-box-fuchsia flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-full bg-fuchsia-500/20 border-2 border-fuchsia-400 flex items-center justify-center text-fuchsia-400 text-2xl mb-3">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h2 class="text-3xl font-black font-outfit text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-amber-300 mb-1">
+                        GAME OVER
+                    </h2>
+                    <p id="crashReason" class="text-slate-400 text-xs mb-4">You crashed into a terrain spike!</p>
+
+                    <!-- Score Stats -->
+                    <div class="w-full bg-slate-950/80 rounded-xl border border-slate-800 p-4 mb-4 grid grid-cols-2 gap-3 text-left">
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold block">FINAL SCORE</span>
+                            <span id="finalScore" class="text-2xl font-black font-outfit text-cyan-300">0</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold block">GATES PASSED</span>
+                            <span id="gatesPassedText" class="text-2xl font-black font-outfit text-fuchsia-300">0</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold block">MAX COMBO</span>
+                            <span id="maxCombo" class="text-2xl font-black font-outfit text-amber-300">x1</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold block">SPELLING ACCURACY</span>
+                            <span id="accuracyText" class="text-2xl font-black font-outfit text-emerald-400">100%</span>
+                        </div>
+                    </div>
+
+                    <!-- Recent Gate Words -->
+                    <div class="w-full mb-5 text-left">
+                        <span class="text-[11px] font-bold text-slate-400 tracking-wider mb-1.5 block">SPELLING GATE HISTORY</span>
+                        <div id="wordHistoryList" class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto p-1 bg-slate-950/50 rounded-lg border border-slate-800">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <button id="restartBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-amber-400 text-slate-950 font-black text-lg font-outfit shadow-lg hover:brightness-110 active:scale-98 transition-all">
+                        <i class="fas fa-redo-alt mr-2"></i> PLAY AGAIN
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Touch Helper for Mobile Devices -->
+        <div class="w-full py-2 bg-slate-900/90 border-t border-slate-800 flex justify-center items-center md:hidden z-10">
+            <span class="text-xs font-bold text-cyan-400"><i class="fas fa-angle-double-up mr-1 animate-bounce"></i> TAP SCREEN TO JUMP <i class="fas fa-angle-double-up ml-1 animate-bounce"></i></span>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio Synthesizer Class for Geometry Dash SFX
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(680, this.ctx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.12);
+                } catch(e){}
+            }
+
+            playPadBoost() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.2);
+                } catch(e){}
+            }
+
+            playCorrect() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.06);
+                        gain.gain.setValueAtTime(0.15, this.ctx.currentTime + idx * 0.06);
+                        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.06 + 0.15);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(this.ctx.currentTime + idx * 0.06);
+                        osc.stop(this.ctx.currentTime + idx * 0.06 + 0.15);
+                    });
+                } catch(e){}
+            }
+
+            playCrash() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(240, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(35, this.ctx.currentTime + 0.35);
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.35);
+                } catch(e){}
+            }
+        }
+
+        const soundFX = new SoundFX();
+
+        // Short Vowel Word Database & Zero-Vowel / Double-Consonant Nonsense Distractors
+        const WORD_DATABASE = [
+            // CVC Words
+            { word: 'cat', distractors: ['ctt', 'cttt'], category: 'CVC' },
+            { word: 'bed', distractors: ['bdd', 'bdd'], category: 'CVC' },
+            { word: 'pig', distractors: ['pgg', 'pggg'], category: 'CVC' },
+            { word: 'mop', distractors: ['mpp', 'mppp'], category: 'CVC' },
+            { word: 'sun', distractors: ['snn', 'snnn'], category: 'CVC' },
+            { word: 'tub', distractors: ['tbb', 'tbbb'], category: 'CVC' },
+            { word: 'run', distractors: ['rnn', 'rnnn'], category: 'CVC' },
+            // CCVC Words
+            { word: 'frog', distractors: ['frg', 'frgg'], category: 'CCVC' },
+            { word: 'plan', distractors: ['pln', 'plnn'], category: 'CCVC' },
+            { word: 'stop', distractors: ['stp', 'stpp'], category: 'CCVC' },
+            { word: 'flag', distractors: ['flg', 'flgg'], category: 'CCVC' },
+            { word: 'drum', distractors: ['drm', 'drmm'], category: 'CCVC' },
+            { word: 'clip', distractors: ['clp', 'clpp'], category: 'CCVC' },
+            { word: 'swim', distractors: ['swm', 'swmm'], category: 'CCVC' },
+            // CVCC Words
+            { word: 'fast', distractors: ['fst', 'ffst'], category: 'CVCC' },
+            { word: 'jump', distractors: ['jmp', 'jmm'], category: 'CVCC' },
+            { word: 'desk', distractors: ['dsk', 'dssk'], category: 'CVCC' },
+            { word: 'milk', distractors: ['mlk', 'mllk'], category: 'CVCC' },
+            { word: 'hand', distractors: ['hnd', 'hnnd'], category: 'CVCC' },
+            { word: 'nest', distractors: ['nst', 'nstt'], category: 'CVCC' },
+            { word: 'lamp', distractors: ['lmp', 'lmpp'], category: 'CVCC' },
+            { word: 'gift', distractors: ['gft', 'gfft'], category: 'CVCC' },
+            { word: 'belt', distractors: ['blt', 'bllt'], category: 'CVCC' },
+            { word: 'camp', distractors: ['cmp', 'cmpp'], category: 'CVCC' }
+        ];
+
+        // Canvas Setup & Global Game State
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+        let groundY = 0;
+
+        let isRunning = false;
+        let isGateActive = false;
+        let gameSpeedSetting = 'normal';
+        let baseSpeed = 5.5;
+
+        let score = 0;
+        let highScore = localStorage.getItem('dash_phonics_gate_hs') || 0;
+        let streak = 0;
+        let maxStreak = 0;
+        let hasShield = false;
+
+        let gateTimer = 5.0; // 5 Seconds Interval
+        let gateTimeRemaining = 5.0; // Time allowed to answer spelling prompt (5s)
+        let activeChallenge = null;
+        let gatesPassed = 0;
+        let gatesAttempted = 0;
+        let spellingHistory = [];
+
+        document.getElementById('highScoreText').textContent = highScore;
+
+        // Player Cube Definition
+        const player = {
+            x: 90,
+            y: 0,
+            size: 38,
+            vy: 0,
+            gravity: 0.88,
+            jumpStrength: -14.8,
+            isGrounded: false,
+            rotation: 0,
+            trail: []
+        };
+
+        let terrainObstacles = [];
+        let particles = [];
+        let bgStars = [];
+        let obstacleSpawnTimer = 0;
+        let nextObstacleDistance = 0;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvasWidth = container.clientWidth;
+            canvasHeight = container.clientHeight;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            groundY = canvasHeight - 65;
+
+            if (!isRunning) {
+                player.y = groundY - player.size;
+            }
+
+            bgStars = [];
+            for (let i = 0; i < 45; i++) {
+                bgStars.push({
+                    x: Math.random() * canvasWidth,
+                    y: Math.random() * (groundY - 40),
+                    size: Math.random() * 2.5 + 1,
+                    speed: Math.random() * 0.6 + 0.2,
+                    alpha: Math.random() * 0.7 + 0.3
+                });
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function getSpeedValue() {
+            switch(gameSpeedSetting) {
+                case 'easy': return 4.2;
+                case 'fast': return 7.5;
+                default: return 5.8;
+            }
+        }
+
+        // Spawn Plain Geometry Dash Terrain Obstacles (Spikes, Blocks, Jump Pads, Portals)
+        function spawnTerrainObstacle() {
+            const types = ['spike', 'double_spike', 'block', 'jump_pad'];
+            const chosenType = types[Math.floor(Math.random() * types.length)];
+
+            if (chosenType === 'spike') {
+                terrainObstacles.push({
+                    type: 'spike',
+                    x: canvasWidth + 20,
+                    y: groundY - 36,
+                    w: 32,
+                    h: 36
+                });
+            } else if (chosenType === 'double_spike') {
+                terrainObstacles.push({
+                    type: 'spike',
+                    x: canvasWidth + 20,
+                    y: groundY - 36,
+                    w: 64,
+                    h: 36
+                });
+            } else if (chosenType === 'block') {
+                terrainObstacles.push({
+                    type: 'block',
+                    x: canvasWidth + 20,
+                    y: groundY - 42,
+                    w: 42,
+                    h: 42
+                });
+            } else if (chosenType === 'jump_pad') {
+                terrainObstacles.push({
+                    type: 'jump_pad',
+                    x: canvasWidth + 20,
+                    y: groundY - 12,
+                    w: 40,
+                    h: 12
+                });
+            }
+        }
+
+        function addParticles(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 9,
+                    vy: (Math.random() - 0.5) * 9,
+                    size: Math.random() * 6 + 3,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.02
+                });
+            }
+        }
+
+        function playerJump(force = null) {
+            soundFX.init();
+            if (player.isGrounded || force) {
+                player.vy = force || player.jumpStrength;
+                player.isGrounded = false;
+                if (!force) soundFX.playJump();
+                else soundFX.playPadBoost();
+                
+                addParticles(player.x + player.size / 2, player.y + player.size, '#06b6d4', 6);
+            }
+        }
+
+        // Key & Touch Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                if (isRunning && !isGateActive) playerJump();
+            }
+        });
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (isRunning && !isGateActive) playerJump();
+        });
+
+        function triggerSpellingGate() {
+            isGateActive = true;
+            gateTimeRemaining = 5.0;
+
+            // Pick a word prompt item
+            const item = WORD_DATABASE[Math.floor(Math.random() * WORD_DATABASE.length)];
+            
+            // Generate 3 choices: 1 correct + 2 distractors shuffled
+            const choices = [
+                { text: item.word, isCorrect: true },
+                { text: item.distractors[0], isCorrect: false },
+                { text: item.distractors[1], isCorrect: false }
+            ].sort(() => Math.random() - 0.5);
+
+            activeChallenge = { item, choices };
+
+            // Render Prompt UI
+            document.getElementById('promptTargetWord').textContent = `Choose the correct spelling for "${item.word.toUpperCase()}"`;
+            
+            const optionsContainer = document.getElementById('spellingOptionsContainer');
+            optionsContainer.innerHTML = '';
+
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'py-3.5 px-4 rounded-xl border-2 border-cyan-500/50 bg-slate-800/90 hover:bg-cyan-950/80 hover:border-cyan-400 text-white font-black text-lg font-outfit shadow-lg transition-all active:scale-95 flex items-center justify-center';
+                btn.textContent = choice.text.toUpperCase();
+                btn.onclick = () => handleGateAnswer(choice.isCorrect, choice.text);
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById('spellingGateOverlay').classList.remove('hidden');
+
+            // Speak prompt audio via SpeechSynthesis if supported
+            speakWordPrompt(item.word);
+        }
+
+        function speakWordPrompt(word) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // stop previous
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.rate = 0.85;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        document.getElementById('speakPromptBtn').onclick = () => {
+            if (activeChallenge) speakWordPrompt(activeChallenge.item.word);
+        };
+
+        function handleGateAnswer(isCorrect, selectedText) {
+            document.getElementById('spellingGateOverlay').classList.add('hidden');
+            isGateActive = false;
+            gateTimer = 5.0; // Reset 5s countdown till next gate
+
+            gatesAttempted++;
+            spellingHistory.unshift({
+                word: activeChallenge.item.word,
+                selected: selectedText,
+                isCorrect: isCorrect,
+                category: activeChallenge.item.category
+            });
+            if (spellingHistory.length > 10) spellingHistory.pop();
+
+            if (isCorrect) {
+                gatesPassed++;
+                score += 50 * (streak + 1);
+                streak++;
+                if (streak > maxStreak) maxStreak = streak;
+
+                hasShield = true;
+                document.getElementById('shieldIndicator').classList.remove('hidden');
+
+                soundFX.playCorrect();
+                addParticles(canvasWidth / 2, canvasHeight / 2, '#22c55e', 35);
+
+                // HUD updates
+                document.getElementById('scoreText').textContent = score;
+                document.getElementById('streakText').textContent = `x${streak + 1}`;
+            } else {
+                streak = 0;
+                document.getElementById('streakText').textContent = 'x1';
+
+                if (hasShield) {
+                    hasShield = false;
+                    document.getElementById('shieldIndicator').classList.add('hidden');
+                    soundFX.playCrash();
+                    addParticles(player.x, player.y, '#f59e0b', 20);
+                } else {
+                    triggerGameOver(`Incorrect spelling selected: "${selectedText.toUpperCase()}"! Correct spelling was "${activeChallenge.item.word.toUpperCase()}".`);
+                }
+            }
+        }
+
+        function update(deltaTime) {
+            if (!isRunning) return;
+
+            // Handle Gate Active State
+            if (isGateActive) {
+                gateTimeRemaining -= deltaTime;
+                const percent = Math.max(0, (gateTimeRemaining / 5.0) * 100);
+                document.getElementById('gateCountdownBar').style.width = `${percent}%`;
+
+                if (gateTimeRemaining <= 0) {
+                    // Timeout counted as incorrect
+                    handleGateAnswer(false, 'TIMEOUT');
+                }
+                return; // Freeze background physics during spelling gate
+            }
+
+            // Update Gate Countdown Timer Bar (5 Seconds Interval)
+            gateTimer -= deltaTime;
+            if (gateTimer <= 0) {
+                triggerSpellingGate();
+                return;
+            }
+
+            const timerPercent = Math.max(0, (gateTimer / 5.0) * 100);
+            document.getElementById('gateTimerBar').style.width = `${timerPercent}%`;
+            document.getElementById('gateTimerText').textContent = `${gateTimer.toFixed(1)}s`;
+
+            const currentSpeed = getSpeedValue() + (score * 0.03);
+
+            // Update Parallax Stars
+            bgStars.forEach(star => {
+                star.x -= star.speed;
+                if (star.x < 0) star.x = canvasWidth;
+            });
+
+            // Player Trail Particles
+            if (Math.random() < 0.6) {
+                player.trail.push({ x: player.x, y: player.y, alpha: 0.6 });
+            }
+            player.trail.forEach(t => t.alpha -= 0.05);
+            player.trail = player.trail.filter(t => t.alpha > 0);
+
+            // Physics Gravity
+            player.vy += player.gravity;
+            player.y += player.vy;
+
+            if (!player.isGrounded) {
+                player.rotation += 0.14;
+            } else {
+                player.rotation = Math.round(player.rotation / (Math.PI / 2)) * (Math.PI / 2);
+            }
+
+            // Check Ground Collision
+            player.isGrounded = false;
+            if (player.y + player.size >= groundY) {
+                player.y = groundY - player.size;
+                player.vy = 0;
+                player.isGrounded = true;
+            }
+
+            // Terrain Spawning
+            obstacleSpawnTimer += currentSpeed;
+            if (obstacleSpawnTimer > nextObstacleDistance) {
+                spawnTerrainObstacle();
+                obstacleSpawnTimer = 0;
+                nextObstacleDistance = Math.random() * 140 + 200;
+            }
+
+            // Process Terrain Obstacles Collisions
+            for (let i = terrainObstacles.length - 1; i >= 0; i--) {
+                const obs = terrainObstacles[i];
+                obs.x -= currentSpeed;
+
+                const px = player.x;
+                const py = player.y;
+                const pw = player.size;
+                const ph = player.size;
+
+                if (obs.type === 'spike') {
+                    // Triangle Spike Collision
+                    if ((px + pw - 6 > obs.x) && (px + 6 < obs.x + obs.w) && (py + ph > obs.y + 6)) {
+                        if (hasShield) {
+                            hasShield = false;
+                            document.getElementById('shieldIndicator').classList.add('hidden');
+                            terrainObstacles.splice(i, 1);
+                            soundFX.playCrash();
+                            addParticles(obs.x, obs.y, '#f59e0b', 20);
+                        } else {
+                            triggerGameOver("Crashed into a terrain spike!");
+                            return;
+                        }
+                    }
+                } else if (obs.type === 'block') {
+                    // Solid Block Collision
+                    const isAbove = (py + ph - player.vy <= obs.y + 10) && (py + ph >= obs.y);
+                    const isAligned = (px + pw > obs.x + 6) && (px < obs.x + obs.w - 6);
+
+                    if (isAligned && isAbove && player.vy >= 0) {
+                        player.y = obs.y - ph;
+                        player.vy = 0;
+                        player.isGrounded = true;
+                    } else if ((px + pw > obs.x) && (px < obs.x + obs.w) && (py + ph > obs.y + 8)) {
+                        if (hasShield) {
+                            hasShield = false;
+                            document.getElementById('shieldIndicator').classList.add('hidden');
+                            terrainObstacles.splice(i, 1);
+                            soundFX.playCrash();
+                        } else {
+                            triggerGameOver("Crashed into a solid terrain block!");
+                            return;
+                        }
+                    }
+                } else if (obs.type === 'jump_pad') {
+                    // Jump Pad Boost
+                    if ((px + pw > obs.x) && (px < obs.x + obs.w) && (py + ph >= obs.y)) {
+                        playerJump(-18.5); // Super jump launch
+                        addParticles(obs.x + obs.w / 2, obs.y, '#f59e0b', 15);
+                    }
+                }
+
+                if (obs.x + obs.w < -40) terrainObstacles.splice(i, 1);
+            }
+
+            // Particle Updates
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#050811';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // Draw Stars
+            bgStars.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Grid Lines
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.08)';
+            ctx.lineWidth = 1;
+            const gridSpacing = 40;
+            const offsetX = (Date.now() * 0.05) % gridSpacing;
+            for (let x = -offsetX; x < canvasWidth; x += gridSpacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, groundY);
+                ctx.stroke();
+            }
+
+            // Draw Ground Surface
+            const groundGrad = ctx.createLinearGradient(0, groundY, 0, canvasHeight);
+            groundGrad.addColorStop(0, '#111827');
+            groundGrad.addColorStop(1, '#020617');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, groundY, canvasWidth, canvasHeight - groundY);
+
+            // Ground Top Glow Line
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 12;
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(canvasWidth, groundY);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Draw Terrain Obstacles
+            terrainObstacles.forEach(obs => {
+                if (obs.type === 'spike') {
+                    ctx.fillStyle = '#9f1239';
+                    ctx.strokeStyle = '#f43f5e';
+                    ctx.lineWidth = 2.5;
+                    ctx.shadowColor = '#f43f5e';
+                    ctx.shadowBlur = 10;
+
+                    const count = obs.w > 40 ? 2 : 1;
+                    const subW = obs.w / count;
+                    ctx.beginPath();
+                    for (let s = 0; s < count; s++) {
+                        const sx = obs.x + s * subW;
+                        ctx.moveTo(sx, obs.y + obs.h);
+                        ctx.lineTo(sx + subW / 2, obs.y);
+                        ctx.lineTo(sx + subW, obs.y + obs.h);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                } else if (obs.type === 'block') {
+                    ctx.fillStyle = '#0f172a';
+                    ctx.strokeStyle = '#06b6d4';
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = '#06b6d4';
+                    ctx.shadowBlur = 10;
+
+                    ctx.beginPath();
+                    ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 6);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                } else if (obs.type === 'jump_pad') {
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.shadowColor = '#f59e0b';
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 4);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            });
+
+            // Draw Player Trail
+            player.trail.forEach(t => {
+                ctx.fillStyle = `rgba(6, 182, 212, ${t.alpha * 0.4})`;
+                ctx.fillRect(t.x, t.y, player.size, player.size);
+            });
+
+            // Draw Player Cube
+            ctx.save();
+            ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
+            ctx.rotate(player.rotation);
+
+            ctx.shadowColor = hasShield ? '#22c55e' : '#06b6d4';
+            ctx.shadowBlur = 16;
+
+            const cubeGrad = ctx.createLinearGradient(-player.size/2, -player.size/2, player.size/2, player.size/2);
+            cubeGrad.addColorStop(0, hasShield ? '#4ade80' : '#22d3ee');
+            cubeGrad.addColorStop(1, hasShield ? '#15803d' : '#3b82f6');
+            ctx.fillStyle = cubeGrad;
+            ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
+
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
+
+            // Icon Eyes Face
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-player.size / 4, -player.size / 4, 6, 6);
+            ctx.fillRect(player.size / 4 - 6, -player.size / 4, 6, 6);
+            ctx.fillRect(-player.size / 6, player.size / 6, player.size / 3, 4);
+
+            ctx.restore();
+
+            // Render Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        let lastTime = performance.now();
+        function gameLoop(now) {
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            update(Math.min(deltaTime, 0.1));
+            draw();
+
+            if (isRunning) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function startGame() {
+            soundFX.init();
+            isRunning = true;
+            isGateActive = false;
+            score = 0;
+            streak = 0;
+            maxStreak = 0;
+            gatesPassed = 0;
+            gatesAttempted = 0;
+            hasShield = false;
+            gateTimer = 5.0;
+            spellingHistory = [];
+            terrainObstacles = [];
+            particles = [];
+            obstacleSpawnTimer = 0;
+            nextObstacleDistance = 180;
+
+            player.x = 90;
+            player.y = groundY - player.size;
+            player.vy = 0;
+            player.isGrounded = true;
+            player.rotation = 0;
+
+            document.getElementById('scoreText').textContent = '0';
+            document.getElementById('streakText').textContent = 'x1';
+            document.getElementById('shieldIndicator').classList.add('hidden');
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('spellingGateOverlay').classList.add('hidden');
+
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function triggerGameOver(reason) {
+            isRunning = false;
+            soundFX.playCrash();
+
+            addParticles(player.x + player.size / 2, player.y + player.size / 2, '#ec4899', 35);
+            draw();
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('dash_phonics_gate_hs', highScore);
+                document.getElementById('highScoreText').textContent = highScore;
+            }
+
+            document.getElementById('crashReason').textContent = reason;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gatesPassedText').textContent = gatesPassed;
+            document.getElementById('maxCombo').textContent = `x${maxStreak + 1}`;
+
+            const accuracy = gatesAttempted > 0 ? Math.round((gatesPassed / gatesAttempted) * 100) : 100;
+            document.getElementById('accuracyText').textContent = `${accuracy}%`;
+
+            renderSpellingHistory();
+
+            setTimeout(() => {
+                document.getElementById('gameOverOverlay').classList.remove('hidden');
+            }, 350);
+        }
+
+        function renderSpellingHistory() {
+            const list = document.getElementById('wordHistoryList');
+            list.innerHTML = '';
+
+            if (spellingHistory.length === 0) {
+                list.innerHTML = '<span class="text-xs text-slate-500">No spelling gates attempted yet.</span>';
+                return;
+            }
+
+            spellingHistory.forEach(item => {
+                const tag = document.createElement('span');
+                tag.className = `px-2 py-0.5 rounded text-xs font-bold border ${
+                    item.isCorrect 
+                        ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' 
+                        : 'bg-rose-950/60 border-rose-500/50 text-rose-300'
+                }`;
+                tag.innerHTML = `${item.word.toUpperCase()} ${item.isCorrect ? '<i class="fas fa-check text-[10px]"></i>' : '<i class="fas fa-times text-[10px]"></i>'}`;
+                list.appendChild(tag);
+            });
+        }
+
+        document.getElementById('startBtn').onclick = startGame;
+        document.getElementById('restartBtn').onclick = startGame;
+
+        document.getElementById('soundBtn').onclick = () => {
+            soundFX.enabled = !soundFX.enabled;
+            const icon = document.getElementById('soundIcon');
+            icon.className = soundFX.enabled ? 'fas fa-volume-up text-lg text-cyan-400' : 'fas fa-volume-mute text-lg text-slate-500';
+        };
+
+        const speedBtns = document.querySelectorAll('.speed-btn');
+        speedBtns.forEach(btn => {
+            btn.onclick = (e) => {
+                speedBtns.forEach(b => {
+                    b.classList.remove('active-speed', 'border-2', 'border-cyan-400', 'bg-cyan-950/60', 'text-cyan-300', 'shadow-lg');
+                    b.classList.add('border', 'border-slate-700', 'text-slate-400');
+                });
+                
+                const target = e.currentTarget;
+                target.classList.remove('border', 'border-slate-700', 'text-slate-400');
+                target.classList.add('active-speed', 'border-2', 'border-cyan-400', 'bg-cyan-950/60', 'text-cyan-300', 'shadow-lg');
+                gameSpeedSetting = target.dataset.speed;
+            };
+        });
+
+        window.onload = () => {
+            resizeCanvas();
+            draw();
+        };
+    </script>
+</body>
+</html>
